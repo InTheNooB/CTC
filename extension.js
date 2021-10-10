@@ -1,36 +1,69 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
+const http = require('http')
+const { exec } = require('child_process');
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+const terminal = vscode.window.createOutputChannel('CTC')
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "CTC" is now active!');
+    let disposable = vscode.commands.registerCommand('CTC.toCarbon', function() {
+        terminal.clear();
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('CTC.helloWorld', function () {
-		// The code you place here will be executed every time your command is executed
+        // Get the selected text
+        let activeTextEditor = vscode.window.activeTextEditor;
+        let selectedText = activeTextEditor.document.getText(new vscode.Range(activeTextEditor.selections[0].start, activeTextEditor.selections[0].end));
+        terminal.appendLine("AVAMT : " + selectedText);
+        terminal.appendLine("APRES : " + encodeURIComponent(selectedText));
+        selectedText = encodeURIComponent(selectedText);
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from CTC!');
-	});
+        // Then send the code to the server
+        const options = {
+            hostname: '85.5.173.143',
+            port: 3000,
+            path: `/?code=${selectedText}`,
+            method: 'GET'
+        }
 
-	context.subscriptions.push(disposable);
+        const req = http.request(options, res => {
+
+            // Retrieve URL from the server
+            res.on('data', imageURL => {
+                // Copies image to clipboard via a powershell script
+                const copyToClipboardScript = `[Reflection.Assembly]::LoadWithPartialName('System.Drawing');
+                [Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');
+        
+                $filename = "temp.png";
+                Invoke-WebRequest -Uri "${imageURL}" -OutFile $filename
+        
+                $file = get-item($filename);
+                $img = [System.Drawing.Image]::Fromfile($file);
+                [System.Windows.Forms.Clipboard]::SetImage($img);
+                $img.Dispose()`;
+                exec(copyToClipboardScript, { 'shell': 'powershell.exe' }, (error, stdout, stderr) => {
+                    // do whatever with stdout
+                    terminal.appendLine("DONE !");
+                })
+            })
+        })
+
+        req.on('error', error => {
+            console.error(error)
+            terminal.appendLine(error.message);
+        })
+        req.end()
+        terminal.show();
+
+    });
+
+    context.subscriptions.push(disposable);
 }
 
-// this method is called when your extension is deactivated
 function deactivate() {}
 
 module.exports = {
-	activate,
-	deactivate
+    activate,
+    deactivate
 }
