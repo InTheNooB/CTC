@@ -1,6 +1,8 @@
 {
     "name": "CTC",
     "displayName": "CTC",
+    "icon" : "icon256.png",
+    "publisher": "LionelDing",
     "description": "Code To Carbon",
     "version": "0.0.1",
     "engines": {
@@ -17,7 +19,14 @@
         "commands": [{
             "command": "CTC.toCarbon",
             "title": "toCarbon"
-        }]
+        }],
+        "keybindings": [
+            {
+                "command": "CTC.toCarbon",
+                "key": "shift+alt+c",
+                "mac": "shift+cmd+c"
+            }
+        ]
     },
     "scripts": {
         "lint": "eslint .",

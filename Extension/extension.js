@@ -14,16 +14,16 @@ function activate(context) {
 
         // Get the selected text
         let activeTextEditor = vscode.window.activeTextEditor;
+        let extension = activeTextEditor.document.fileName.split('.').pop().toLowerCase();
         let selectedText = activeTextEditor.document.getText(new vscode.Range(activeTextEditor.selections[0].start, activeTextEditor.selections[0].end));
-        terminal.appendLine("AVAMT : " + selectedText);
-        terminal.appendLine("APRES : " + encodeURIComponent(selectedText));
+        terminal.appendLine("[📄] Copying selected text ...")
         selectedText = encodeURIComponent(selectedText);
 
         // Then send the code to the server
         const options = {
-            hostname: '85.5.173.143',
+            hostname: '195.15.240.106',
             port: 3000,
-            path: `/?code=${selectedText}`,
+            path: `/?extension=${extension}&code=${selectedText}`,
             method: 'GET'
         }
 
@@ -44,7 +44,7 @@ function activate(context) {
                 $img.Dispose()`;
                 exec(copyToClipboardScript, { 'shell': 'powershell.exe' }, (error, stdout, stderr) => {
                     // do whatever with stdout
-                    terminal.appendLine("DONE !");
+                    terminal.appendLine("[🖨️] DONE ! Image copied to clipboard");
                 })
             })
         })
