@@ -1,10 +1,11 @@
 {
     "name": "CTC",
     "displayName": "CTC",
-    "icon" : "icon256.png",
+    "icon": "icon256.png",
     "publisher": "LionelDing",
+    "repository": "https://github.com/InTheNooB/CTC",
     "description": "Code To Carbon",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "engines": {
         "vscode": "^1.61.0"
     },
@@ -20,13 +21,11 @@
             "command": "CTC.toCarbon",
             "title": "toCarbon"
         }],
-        "keybindings": [
-            {
-                "command": "CTC.toCarbon",
-                "key": "shift+alt+c",
-                "mac": "shift+cmd+c"
-            }
-        ]
+        "keybindings": [{
+            "command": "CTC.toCarbon",
+            "key": "shift+alt+c",
+            "mac": "shift+cmd+c"
+        }]
     },
     "scripts": {
         "lint": "eslint .",
