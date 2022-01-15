@@ -1,69 +1,120 @@
-const vscode = require('vscode');
-const http = require('http')
-const { exec } = require('child_process');
-
-const terminal = vscode.window.createOutputChannel('CTC')
-
 /**
- * @param {vscode.ExtensionContext} context
+ * Simple webservice that create carbon image using one request
+ * @author : Elwan Mayencourt
+ * @date : 15.01.2022
  */
-function activate(context) {
 
-    let disposable = vscode.commands.registerCommand('CTC.toCarbon', function() {
-        terminal.clear();
+//Requires
+const puppeteer = require("puppeteer");
+const express = require("express");
+const fs = require("fs");
+const { v4: uuidv4 } = require("uuid");
 
-        // Get the selected text
-        let activeTextEditor = vscode.window.activeTextEditor;
-        let extension = activeTextEditor.document.fileName.split('.').pop().toLowerCase();
-        let selectedText = activeTextEditor.document.getText(new vscode.Range(activeTextEditor.selections[0].start, activeTextEditor.selections[0].end));
-        terminal.appendLine("[📄] Copying selected text ...")
-        selectedText = encodeURIComponent(selectedText);
+//App config
+const app = express();
+const port = 3000;
 
-        // Then send the code to the server
-        const options = {
-            hostname: '195.15.240.106',
-            port: 3000,
-            path: `/?extension=${extension}&code=${selectedText}`,
-            method: 'GET'
-        }
+//PATH
+const CARBON_URL = `https://carbon.now.sh/?bg=rgba%28171%2C184%2C195%2C0%29&t=seti&wt=none&ds=true&dsyoff=0px&dsblur=68px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false`;
+const DOWNLOAD_PATH = "/home/ubuntu/Downloads/";
+const CTC_IMAGES_PATH = "/home/ubuntu/NodeJs/CTC/Images/";
+const SERVER_URL = "http://serv.elwan.ch:3000/";
+const IMAGE_ERROR_PATH = `${SERVER_URL}error.png`;
+//Delay function
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-        const req = http.request(options, res => {
+let browser;
+let page;
 
-            // Retrieve URL from the server
-            res.on('data', imageURL => {
-                // Copies image to clipboard via a powershell script
-                const copyToClipboardScript = `[Reflection.Assembly]::LoadWithPartialName('System.Drawing');
-                [Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');
-        
-                $filename = "temp.png";
-                Invoke-WebRequest -Uri "${imageURL}" -OutFile $filename
-        
-                $file = get-item($filename);
-                $img = [System.Drawing.Image]::Fromfile($file);
-                [System.Windows.Forms.Clipboard]::SetImage($img);
-                $img.Dispose()`;
-                exec(copyToClipboardScript, { 'shell': 'powershell.exe' }, (error, stdout, stderr) => {
-                    // do whatever with stdout
-                    terminal.appendLine("[🖨️] DONE ! Image copied to clipboard");
-                })
-            })
-        })
+//Auto run puppeteer
+(async () => {
+  browser = await puppeteer.launch({ headless: false });
+  page = await browser.newPage();
+})();
 
-        req.on('error', error => {
-            console.error(error)
-            terminal.appendLine(error.message);
-        })
-        req.end()
-        terminal.show();
 
-    });
 
-    context.subscriptions.push(disposable);
-}
+app.get("/", (req, res) => {
+  try {
+    (async () => {
+      let extension = "";
+      //Check the file extension to be able to colorize it correctly
+      switch (req.query.extension) {
+        case "js":
+          extension = "javascript";
+          break;
+        case "json":
+          extension = "application%2Fjson";
+          break;
+        case "html":
+        case "htm":
+          extension = "htmlmixed";
+          break;
+        case "css":
+          extension = "css";
+          break;
+        case "php":
+          extension = "text%2Fx-php";
+          break;
+        case "py":
+          extension = "python";
+          break;
+        case "sh":
+        case "bat":
+          extension = "application%2Fx-sh";
+          break;
+      }
 
-function deactivate() {}
+      //Open carbon with given code and programming language
+      await page.goto(
+        `${CARBON_URL}&l=${extension}&code=${encodeURIComponent(
+          req.query.code
+        )}`
+      );
 
-module.exports = {
-    activate,
-    deactivate
-}
+      //Generate random name
+      let randomImageName = uuidv4();
+
+      //Export the code into an image
+      let selector = "#export-menu";
+      await page.waitForSelector(selector);
+      await page.click(selector);
+
+      //Set random name
+      selector = ".jsx-2285144321";
+      await page.waitForSelector(selector);
+      await page.type(selector, randomImageName);
+
+      //Download the image
+      selector = "#export-png";
+      await page.waitForSelector(selector);
+      await page.click(selector);
+
+      await delay(1000);
+
+      let imgCtcPath = `${CTC_IMAGES_PATH}${randomImageName}.png`;
+      let imgDownloadPath = `${DOWNLOAD_PATH}${randomImageName}.png`;
+      let imgServerPath = `${SERVER_URL}${randomImageName}.png`;
+
+      fs.rename(imgDownloadPath, imgCtcPath, function (err) {
+        let toSend = IMAGE_ERROR_PATH;
+        if (!err) {toSend = imgServerPath};
+        res.send(toSend);
+        //Wait 30 seconds and delete the image
+        setTimeout(() => {
+          fs.unlink(imgCtcPath, (err) => {});
+        }, 30000);
+      })
+    })();
+  } catch (error) {res.send(IMAGE_ERROR_PATH)};
+});
+
+//Get image
+app.get(/.*png$/, function (req, res) {
+  res.sendFile(`${CTC_IMAGES_PATH}${req.originalUrl}`);
+});
+
+//Start app
+app.listen(port, () => {
+  console.log(`CTC Server Listening On Port :${port}`);
+});

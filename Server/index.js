@@ -20,7 +20,7 @@ const port = 3000
 const CARBON_URL = `https://carbon.now.sh/?bg=rgba%28171%2C+184%2C+195%2C+1%29&t=seti&wt=none&ds=true&dsyoff=0px&dsblur=68px&wc=true&wa=true&pv=0px&ph=0px&ln=false&fl=1&fm=Hack&fs=14px&lh=133%25&si=false&es=2x&wm=false`
 const DOWNLOAD_PATH = '/home/ubuntu/Downloads/carbon.png'
 const PROJECT_PATH = '/home/ubuntu/NodeJs/CTC/'
-const SERVER_URL = 'http://195.15.240.106:3000/'
+const SERVER_URL = 'http://serv.elwan.ch:3000/'
 
 //Delay function
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -28,10 +28,9 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 let browser
 let page
 
-
 //Auto run puppeteer
 (async () => {
-  browser = await puppeteer.launch({ headless: false })
+  browser = await puppeteer.launch({ headless: true })
   page = await browser.newPage()
 })()
 
@@ -81,7 +80,7 @@ app.get('/', (req, res) => {
       await page.waitForSelector(selector)
       await page.click(selector)
       //Waits for the download to finish
-      await delay(1000)
+      await delay(2000)
 
       //Generate random name
       let name = uuidv4() + '.png'
@@ -101,6 +100,7 @@ app.get('/', (req, res) => {
 
 //Get image
 app.get(/.*png$/, function (req, res) {
+  console.log("send file")
   res.sendFile(`${PROJECT_PATH}${req.originalUrl}`)
 })
 
